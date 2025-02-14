@@ -1,1 +1,116 @@
+// pasta: models
+// arquivo: planeta.dart
+class Planeta {
+  int id;
+  String nome;
+  String apelido;
+  double distanciaDoSol;
+  double tamanho;
+
+  Planeta({this.id, this.nome, this.apelido, this.distanciaDoSol, this.tamanho});
+
+  factory Planeta.fromJson(Map<String, dynamic> json) {
+    return Planeta(
+      id: json['id'],
+      nome: json['nome'],
+      apelido: json['apelido'],
+      distanciaDoSol: json['distanciaDoSol'],
+      tamanho: json['tamanho'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'nome': nome,
+      'apelido': apelido,
+      'distanciaDoSol': distanciaDoSol,
+      'tamanho': tamanho,
+    };
+  }
+}
+
+
+
+// pasta: database
+// arquivo: database_helper.dart
+class DatabaseHelper {
+  static final DatabaseHelper _instance = DatabaseHelper._internal();
+
+  factory DatabaseHelper() => _instance;
+
+  DatabaseHelper._internal();
+
+  static Database _database;
+
+  Future<Database> get database async {
+    if (_database != null) return _database;
+    _database = await createDatabase();
+    return _database;
+  }
+
+  Future<Database> createDatabase() async {
+    Directory documentsDirectory = await getApplicationDocumentsDirectory();
+    String path = join(documentsDirectory.path, 'planetas.db');
+
+    return await openDatabase(path, version: 1, onCreate: (Database db, int version) async {
+      await db.execute('''
+          CREATE TABLE planetas (
+            id INTEGER PRIMARY KEY,
+            nome TEXT NOT NULL,
+            apelido TEXT,
+            distanciaDoSol REAL NOT NULL,
+            tamanho REAL NOT NULL
+          )
+        ''');
+    });
+  }
+
+  Future<int> insertPlaneta(Planeta planeta) async {
+    Database db = await database;
+    return await db.insert('planetas', planeta.toJson());
+  }
+
+  Future<List<Planeta>> getPlanetas() async {
+    Database db = await database;
+    List<Map<String, dynamic>> maps = await db.query('planetas');
+    return maps.map((map) => Planeta.fromJson(map)).toList();
+  }
+
+  Future<int> updatePlaneta(Planeta planeta) async {
+    Database db = await database;
+    return await db.update('planetas', planeta.toJson(), where: 'id = ?', whereArgs: [planeta.id]);
+  }
+
+  Future<int> deletePlaneta(int id) async {
+    Database db = await database;
+    return await db.delete('planetas', where: 'id = ?', whereArgs: [id]);
+  }
+}
+
+
+
+// pasta: screens
+// arquivo: planeta_page.dart
+class PlanetaPage extends StatefulWidget {
+  @override
+  _PlanetaPageState createState() => _PlanetaPageState();
+}
+
+class _PlanetaPageState extends State<PlanetaPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _nomeController = TextEditingController();
+  final _apelidoController = TextEditingController();
+  final _distanciaDoSolController = TextEditingController();
+  final _tamanhoController = TextEditingController();
+  List<Planeta> _planetas = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlanetas();
+  }
+
+  @override
+  Widget build(BuildContext context) {
 
